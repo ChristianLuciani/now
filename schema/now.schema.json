@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ChristianLuciani/now/blob/main/schema/now.schema.json",
+  "title": "now/v1 — what I'm working on now",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "asOf", "items"],
+  "properties": {
+    "schema": { "const": "now/v1" },
+    "asOf": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fetch instant, ISO 8601 in UTC. Data, not decoration: consumers compare it to decide staleness."
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "Sorted by date desc, then url asc. The order is part of the contract because it is part of the bytes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "title", "url", "date", "source"],
+        "properties": {
+          "kind": {
+            "enum": ["release", "post", "pr", "note"],
+            "description": "Closed in v1. A new kind is a new minor of the shape."
+          },
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "url": {
+            "type": "string",
+            "pattern": "^https://",
+            "description": "https only: the block is rendered as a link on a public surface."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "YYYY-MM-DD, absolute, taken from the source (never computed at render time)."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Where the row came from, e.g. github:owner/repo. Provenance, not decoration."
+          }
+        }
+      }
+    }
+  }
+}
