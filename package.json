@@ -1,0 +1,17 @@
+{
+  "name": "now",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The feed of what I'm working on now: a committed snapshot producer.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fetch": "node scripts/fetch.mjs",
+    "render": "node scripts/render.mjs",
+    "check": "node scripts/check.mjs",
+    "changed": "node scripts/changed.mjs",
+    "test": "node --test"
+  }
+}

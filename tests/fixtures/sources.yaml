@@ -1,0 +1,9 @@
+# Test allowlist: the same shape as the real sources.yaml.
+sources:
+  - id: releases
+    kind: github-releases
+    owner: ChristianLuciani
+  - id: upstream
+    kind: github-prs
+    query: "is:pr is:merged author:ChristianLuciani"
+    first: 5

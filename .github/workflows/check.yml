@@ -1,0 +1,43 @@
+name: check
+
+# Pull-request gate. The writer workflow runs after merge and on a schedule;
+# this one runs the producer's tests before a change lands, and needs no token.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: now-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check the valid fixture
+        # There is no committed now.json yet (the first real writer run creates
+        # it), so exercise render + check on a fixture copy, never on the root.
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cp -R scripts schema "$tmp/"
+          cp tests/fixtures/valid.json "$tmp/now.json"
+          cp tests/fixtures/sources.yaml "$tmp/sources.yaml"
+          cd "$tmp"
+          node scripts/render.mjs
+          node scripts/check.mjs

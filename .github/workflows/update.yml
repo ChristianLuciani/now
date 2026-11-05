@@ -1,0 +1,88 @@
+name: update
+
+# The only writer of now.json / now.md (AGENTS.md §1).
+#
+# One pass over the allowlist (bounded cursor pagination, never an unbounded
+# crawl), then render, then the gate. A failure at any step stops before the
+# commit, so the last tagged snapshot keeps serving.
+#
+# Commit criterion: the item list or the rendered now.md, not the file bytes.
+# `asOf` is regenerated on every run, so now.json always differs byte-wise;
+# `scripts/changed.mjs` decides whether a row changed or the renderer now emits
+# different markdown. The workflow cuts the immutable v1.0.0 tag once, on main.
+
+on:
+  schedule:
+    # Hourly is plenty; the timestamp is offset from the top of the hour.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: now-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Tags are needed to decide whether v1.0.0 already exists.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Fetch sources
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run fetch
+
+      - name: Render now.md
+        run: npm run render
+
+      - name: Validate output
+        run: npm run check
+
+      - name: Commit if the items changed and cut v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # `asOf` changes on every run, so a byte diff would commit forever.
+          # The criterion is the item list: 0 = changed, 1 = identical.
+          if node scripts/changed.mjs; then
+            git add -- now.json now.md
+            git commit -m 'chore: update now snapshot'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            status=$?
+            if [ "$status" -ne 1 ]; then
+              echo 'changed.mjs failed'
+              exit "$status"
+            fi
+            echo 'item list unchanged; nothing to commit (asOf alone is not a change)'
+          fi
+
+          # v1.0.0 is immutable: cut it once, from main, carrying the first
+          # committed snapshot. Later releases are explicit minor cuts.
+          if [ "${GITHUB_REF}" != 'refs/heads/main' ]; then
+            echo 'not on main; skipping tag'
+            exit 0
+          fi
+          if git rev-parse -q --verify 'refs/tags/v1.0.0' >/dev/null; then
+            echo 'v1.0.0 already exists; leaving it immutable'
+            exit 0
+          fi
+          git tag -a v1.0.0 -m 'now v1.0.0: first tagged snapshot'
+          git push origin refs/tags/v1.0.0

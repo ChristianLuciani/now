@@ -4,8 +4,8 @@ What I'm working on now — a small, committed snapshot that feeds the public su
 that must stay current: the GitHub profile README and
 [christianluciani.github.io](https://christianluciani.github.io).
 
-**Status: skeleton.** The contract and the v1 shape are fixed here; the producer is
-tracked in #1.
+**Status: implemented.** The contract and the v1 shape are fixed here; the producer
+lives in `scripts/` and runs from `.github/workflows/update.yml`.
 
 ## Why a repo and not "just an Action"
 
@@ -27,8 +27,11 @@ them apart is what preserves the engine's determinism (SPEC §15.1/§19.5 in
 1. **One producer.** Only the workflow in this repo writes `now.json` / `now.md`.
    Never hand-edit either.
 2. **Snapshot, not crawler.** The workflow fetches declared sources, writes what it
-   got, and stops. No runtime API here, no per-visitor fetch.
+   got, and stops. Cursor pagination is bounded (at most 5 pages). No runtime API
+   here, no per-visitor fetch.
 3. **Committed output.** `now.json` + `now.md` are committed, dated, and tagged.
+   The workflow commits only when the `items` list or the rendered `now.md`
+   changes; a new `asOf` alone is not a change worth a commit.
 4. **Absolute time only.** Source dates are `YYYY-MM-DD`; `asOf` is the fetch instant
    in UTC. Never "2 hours ago" — it rots in cache and it lies.
 5. **Public sources only, declared.** `sources.yaml` is the allowlist. No tokens in
@@ -47,6 +50,16 @@ them apart is what preserves the engine's determinism (SPEC §15.1/§19.5 in
 
 `now.md` is **generated from** `now.json` — one renderer, one home. Two hand-written
 copies would drift.
+
+### Commands
+
+```sh
+npm run fetch     # sources.yaml → now.json (needs GITHUB_TOKEN; only the workflow has it)
+npm run render    # now.json → now.md (idempotent)
+npm run check     # schema + order + https-only + no relative dates + no token-shaped strings
+npm run changed   # exit 0 if items or the rendered now.md differ from HEAD, 1 if not
+npm test          # fixtures against a local GraphQL stub; no network
+```
 
 ### Shape (v1)
 

@@ -1,0 +1,24 @@
+# Allowlist of the sources the producer may read.
+#
+# This is not general YAML: the producer parses a strict subset (top-level
+# `sources:` mapping, a sequence of `- id:` items, scalar fields). Unknown
+# fields and unknown kinds are rejected rather than ignored.
+#
+# One pass per source per run; the releases walk follows at most 5 cursor
+# pages. No discovery, no retries, no redirects.
+
+sources:
+  # Latest release of each public repo on the account.
+  # The workflow's GITHUB_TOKEN is an installation token (viewer =
+  # github-actions[bot]), so the account is named explicitly.
+  # Fallback: env GITHUB_REPOSITORY_OWNER.
+  - id: releases
+    kind: github-releases
+    owner: ChristianLuciani
+
+  # PRs authored by the account that were merged upstream.
+  # GraphQL: search(query: "is:pr is:merged author:...", first: 5).
+  - id: upstream
+    kind: github-prs
+    query: "is:pr is:merged author:ChristianLuciani"
+    first: 5
