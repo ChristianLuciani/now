@@ -15,13 +15,17 @@ export const USER_AGENT =
 export const RELEASES_PER_PAGE = 100;
 export const MAX_RELEASE_PAGES = 5;
 
+// `first: 1`, never `last: 1`: the `releases` connection is ordered by
+// created_at DESC by default, so the FIRST element is the newest release and
+// the LAST is the oldest. A real run published v0.2.0 (2026-10-09) while
+// v0.4.0 (2026-11-04) was out, because `last: 1` picked the tail.
 const RELEASES_QUERY = `query($owner: String!, $first: Int!, $after: String) {
   user(login: $owner) {
     repositories(first: $first, after: $after, privacy: PUBLIC, ownerAffiliations: OWNER, orderBy: {field: NAME, direction: ASC}) {
       pageInfo { hasNextPage endCursor }
       nodes {
         nameWithOwner
-        releases(last: 1) {
+        releases(first: 1) {
           nodes { tagName url publishedAt }
         }
       }

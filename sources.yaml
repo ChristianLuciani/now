@@ -17,8 +17,16 @@ sources:
     owner: ChristianLuciani
 
   # PRs authored by the account that were merged upstream.
-  # GraphQL: search(query: "is:pr is:merged author:...", first: 5).
+  # GraphQL: search(query: "is:pr is:merged author:...", first: N).
+  #
+  # `first: 2`, not 5: the snapshot keeps 5 items overall and this source
+  # returns the newest ones, so asking for 5 fills the whole cut and starves
+  # every other source (measured: the first real run published 5 PRs and zero
+  # releases).
+  #
+  # `-repo:` keeps the feed's own plumbing out of the feed: the PRs that build
+  # this producer are not "what I'm working on".
   - id: upstream
     kind: github-prs
-    query: "is:pr is:merged author:ChristianLuciani"
-    first: 5
+    query: "is:pr is:merged author:ChristianLuciani -repo:ChristianLuciani/now"
+    first: 2
