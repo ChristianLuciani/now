@@ -1,0 +1,79 @@
+name: update
+
+# The only writer of now.json / now.md (AGENTS.md §1).
+#
+# One pass over the allowlist, then render, then the gate. A failure at any step
+# stops before the commit, so the last tagged snapshot keeps serving. The
+# workflow commits only when the bytes changed and cuts the immutable v1.0.0 tag
+# once, on main.
+
+on:
+  schedule:
+    # Hourly is plenty; the timestamp is offset from the top of the hour.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: now-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Tags are needed to decide whether v1.0.0 already exists.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch sources
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run fetch
+
+      - name: Render now.md
+        run: npm run render
+
+      - name: Validate output
+        run: npm run check
+
+      - name: Commit and cut v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # Commit only when the bytes changed. `now.json` and `now.md` are the
+          # only files this job is allowed to touch.
+          git add -- now.json now.md
+          if git diff --cached --quiet; then
+            echo 'now.json/now.md unchanged; nothing to commit'
+          else
+            git commit -m 'chore: update now snapshot'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+          # v1.0.0 is immutable: cut it once, from main, carrying the first
+          # committed snapshot. Later releases are explicit minor cuts.
+          if [ "${GITHUB_REF}" != 'refs/heads/main' ]; then
+            echo 'not on main; skipping tag'
+            exit 0
+          fi
+          if git rev-parse -q --verify 'refs/tags/v1.0.0' >/dev/null; then
+            echo 'v1.0.0 already exists; leaving it immutable'
+            exit 0
+          fi
+          git tag -a v1.0.0 -m 'now v1.0.0: first tagged snapshot'
+          git push origin refs/tags/v1.0.0

@@ -3,7 +3,8 @@
 ## What this is
 
 The feed of what I'm working on now: a committed snapshot consumed by the GitHub profile
-README and the site. Skeleton state — the producer is issue #1.
+README and the site. The producer lives in `scripts/`; the workflow in
+`.github/workflows/update.yml` owns the committed output.
 
 ## Rules
 
@@ -19,10 +20,11 @@ README and the site. Skeleton state — the producer is issue #1.
    (`date` desc, then `url` asc).
 8. **Branch + PR.** The human merges; never push to `main`.
 
-## Commands (once implemented, #1)
+## Commands
 
 ```sh
-npm run fetch     # sources → now.json
+npm run fetch     # sources → now.json (needs GITHUB_TOKEN; the workflow has it)
 npm run render    # now.json → now.md (idempotent)
 npm run check     # schema + sorted + no secrets in the output
+npm test          # fixtures and a local GraphQL stub; no network
 ```

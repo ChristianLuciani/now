@@ -4,8 +4,8 @@ What I'm working on now — a small, committed snapshot that feeds the public su
 that must stay current: the GitHub profile README and
 [christianluciani.github.io](https://christianluciani.github.io).
 
-**Status: skeleton.** The contract and the v1 shape are fixed here; the producer is
-tracked in #1.
+**Status: implemented.** The contract and the v1 shape are fixed here; the producer
+lives in `scripts/` and runs from `.github/workflows/update.yml`.
 
 ## Why a repo and not "just an Action"
 
@@ -47,6 +47,15 @@ them apart is what preserves the engine's determinism (SPEC §15.1/§19.5 in
 
 `now.md` is **generated from** `now.json` — one renderer, one home. Two hand-written
 copies would drift.
+
+### Commands
+
+```sh
+npm run fetch     # sources.yaml → now.json (needs GITHUB_TOKEN; only the workflow has it)
+npm run render    # now.json → now.md (idempotent)
+npm run check     # schema + order + https-only + no relative dates + no token-shaped strings
+npm test          # fixtures against a local GraphQL stub; no network
+```
 
 ### Shape (v1)
 

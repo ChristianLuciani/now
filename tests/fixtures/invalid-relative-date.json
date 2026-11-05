@@ -1,0 +1,13 @@
+{
+  "schema": "now/v1",
+  "asOf": "2026-11-05T18:00:00Z",
+  "items": [
+    {
+      "kind": "release",
+      "title": "gamma v0.1.0",
+      "url": "https://github.com/ChristianLuciani/gamma/releases/tag/v0.1.0",
+      "date": "2 hours ago",
+      "source": "github:ChristianLuciani/gamma"
+    }
+  ]
+}
