@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { compareItems, isSortedTotal } from '../scripts/lib/snapshot.mjs';
 import { isDate, isDateTime } from '../scripts/lib/schema.mjs';
-import { parseSources, validateSources } from '../scripts/lib/sources.mjs';
+import { loadSources, parseSources, validateSources } from '../scripts/lib/sources.mjs';
 import { renderMarkdown } from '../scripts/lib/render.mjs';
 import { runFetch } from '../scripts/fetch.mjs';
 import {
@@ -16,6 +16,8 @@ import {
   FIXTURES,
   PRS,
   RELEASES,
+  RELEASES_MULTI,
+  REPO_ROOT,
   RENDER,
   githubHandler,
   makeReleaseNodes,
@@ -538,4 +540,47 @@ test('schema: date formats are absolute only', () => {
 test('fixtures directory is present', async () => {
   const names = await fs.readdir(FIXTURES);
   assert.ok(names.includes('sources.yaml'));
+});
+
+// The first real run published v0.2.0 (2026-10-09) while v0.4.0 (2026-11-04)
+// was out: `releases(last: 1)` takes the TAIL of a newest-first connection.
+// The stub models that ordering, so flipping `first` back to `last` fails here.
+test('fetch: each repo contributes its NEWEST release, not the oldest', async (t) => {
+  const { requests, handler } = recordingGithub({ releases: RELEASES_MULTI });
+  const server = await stubServer(handler);
+  t.after(() => server.close());
+  const root = await tmpRepo(t);
+
+  const result = await runNode(FETCH, { cwd: root, env: ENV(server) });
+  assert.equal(result.code, 0, result.stderr);
+
+  const snapshot = JSON.parse(await fs.readFile(path.join(root, 'now.json'), 'utf8'));
+  const urls = snapshot.items.map((item) => item.url);
+  assert.ok(
+    urls.includes('https://github.com/ChristianLuciani/alpha/releases/tag/v3.0.0'),
+    `expected alpha's newest release, got ${JSON.stringify(urls)}`,
+  );
+  assert.ok(
+    urls.includes('https://github.com/ChristianLuciani/beta/releases/tag/v3.1.0'),
+    `expected beta's newest release, got ${JSON.stringify(urls)}`,
+  );
+  assert.ok(!urls.some((url) => url.endsWith('/v1.0.0')), 'the oldest release must not win');
+
+  const releasesRequest = requests.find((payload) =>
+    String(payload.query).includes('repositories('),
+  );
+  assert.match(String(releasesRequest.query), /releases\(first: 1\)/);
+  assert.ok(!String(releasesRequest.query).includes('releases(last:'), 'must not take the tail');
+});
+
+// The committed allowlist is part of the feed's shape: a source that asks for
+// as many items as the global cut starves every other source (measured: 5 PRs,
+// 0 releases), and the feed's own plumbing PRs are not "what I'm working on".
+test('sources.yaml: upstream is bounded and excludes the feed repo', async () => {
+  const text = await fs.readFile(path.join(REPO_ROOT, 'sources.yaml'), 'utf8');
+  const doc = loadSources(text);
+  const upstream = doc.sources.find((source) => source.id === 'upstream');
+  assert.ok(upstream, 'upstream source is declared');
+  assert.ok(upstream.first <= 2, `upstream must not fill the cut alone, got first: ${upstream.first}`);
+  assert.match(upstream.query, /-repo:ChristianLuciani\/now\b/);
 });

@@ -176,6 +176,56 @@ export const RELEASES = {
   },
 };
 
+// Repos with SEVERAL releases, newest-first, the way GitHub returns them.
+export const RELEASES_MULTI = {
+  user: {
+    repositories: {
+      pageInfo: { hasNextPage: false, endCursor: null },
+      nodes: [
+        {
+          nameWithOwner: 'ChristianLuciani/alpha',
+          releases: {
+            nodes: [
+              {
+                tagName: 'v3.0.0',
+                url: 'https://github.com/ChristianLuciani/alpha/releases/tag/v3.0.0',
+                publishedAt: '2026-11-04T10:00:00Z',
+              },
+              {
+                tagName: 'v2.0.0',
+                url: 'https://github.com/ChristianLuciani/alpha/releases/tag/v2.0.0',
+                publishedAt: '2026-10-01T10:00:00Z',
+              },
+              {
+                tagName: 'v1.0.0',
+                url: 'https://github.com/ChristianLuciani/alpha/releases/tag/v1.0.0',
+                publishedAt: '2026-09-01T10:00:00Z',
+              },
+            ],
+          },
+        },
+        {
+          nameWithOwner: 'ChristianLuciani/beta',
+          releases: {
+            nodes: [
+              {
+                tagName: 'v3.1.0',
+                url: 'https://github.com/ChristianLuciani/beta/releases/tag/v3.1.0',
+                publishedAt: '2026-11-03T10:00:00Z',
+              },
+              {
+                tagName: 'v3.0.0',
+                url: 'https://github.com/ChristianLuciani/beta/releases/tag/v3.0.0',
+                publishedAt: '2026-10-02T10:00:00Z',
+              },
+            ],
+          },
+        },
+      ],
+    },
+  },
+};
+
 export const PRS = {
   search: {
     nodes: [
@@ -208,6 +258,29 @@ const VIEWER_IS_THE_BOT = {
   },
 };
 
+// Models GitHub's ordering for the `releases` connection: entries come back
+// newest-first (created_at DESC), so `first: 1` is the newest release and
+// `last: 1` is the oldest. Without this, a `first`/`last` regression is
+// invisible to the suite — exactly the bug the first real run exposed (the
+// snapshot published v0.2.0 while v0.4.0 was out).
+export function applyReleaseWindow(query, data) {
+  const takesLast = /releases\(\s*last\s*:/.test(query);
+  const takesFirst = /releases\(\s*first\s*:/.test(query);
+  if (!takesLast && !takesFirst) return data;
+  const repositories = data?.user?.repositories;
+  if (!Array.isArray(repositories?.nodes)) return data;
+  const nodes = repositories.nodes.map((repo) => {
+    const releases = repo?.releases?.nodes;
+    if (!Array.isArray(releases) || releases.length === 0) return repo;
+    const picked = takesLast ? releases[releases.length - 1] : releases[0];
+    return { ...repo, releases: { nodes: [picked] } };
+  });
+  return {
+    ...data,
+    user: { ...data.user, repositories: { ...repositories, nodes } },
+  };
+}
+
 export function githubHandler({
   fail = null,
   releases = RELEASES,
@@ -230,7 +303,7 @@ export function githubHandler({
           body: body ?? releasesPage([]),
         };
       }
-      return { status: 200, body: { data: releases } };
+      return { status: 200, body: { data: applyReleaseWindow(query, releases) } };
     }
     if (query.includes('search(')) {
       if (fail === 'upstream') return { status: 500, body: { message: 'boom' } };
