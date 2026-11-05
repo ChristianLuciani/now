@@ -1,7 +1,9 @@
 // `npm run fetch`: sources.yaml -> GraphQL -> now.json.
 //
-// One pass, sequential, one request per source. A fetch failure or a schema
-// failure writes nothing: the last tagged snapshot keeps serving.
+// Sequential and bounded: each source runs one pass, and the releases source
+// walks a capped number of cursor pages (never an unbounded crawl). A fetch
+// failure or a schema failure writes nothing: the last tagged snapshot keeps
+// serving.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -47,7 +49,7 @@ export async function runFetch({
     throw new FetchError('GITHUB_TOKEN is not set (only the workflow holds it)');
   }
 
-  const context = { apiUrl: resolveApiUrl(env), token, fetchImpl };
+  const context = { apiUrl: resolveApiUrl(env), token, fetchImpl, env };
   const collected = [];
   for (const source of doc.sources) {
     try {

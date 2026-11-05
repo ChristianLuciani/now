@@ -16,13 +16,20 @@ function escapeTitle(title) {
     .trim();
 }
 
+// A raw destination breaks on parentheses, whitespace or angle brackets. The
+// CommonMark `<...>` form is only used when the URL actually needs it, so the
+// normal output stays plain.
+function formatUrl(url) {
+  return /[()\s<>]/.test(url) ? `<${url}>` : url;
+}
+
 export function renderMarkdown(snapshot) {
   const lines = [NOW_START];
   if (!Array.isArray(snapshot.items) || snapshot.items.length === 0) {
     lines.push(EMPTY_LINE);
   } else {
     for (const item of snapshot.items) {
-      lines.push(`- ${item.date} · [${escapeTitle(item.title)}](${item.url})`);
+      lines.push(`- ${item.date} · [${escapeTitle(item.title)}](${formatUrl(item.url)})`);
     }
   }
   lines.push(NOW_END);

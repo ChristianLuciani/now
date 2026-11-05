@@ -2,6 +2,7 @@
 sources:
   - id: releases
     kind: github-releases
+    owner: ChristianLuciani
   - id: upstream
     kind: github-prs
     query: "is:pr is:merged author:ChristianLuciani"

@@ -2,10 +2,14 @@ name: update
 
 # The only writer of now.json / now.md (AGENTS.md §1).
 #
-# One pass over the allowlist, then render, then the gate. A failure at any step
-# stops before the commit, so the last tagged snapshot keeps serving. The
-# workflow commits only when the bytes changed and cuts the immutable v1.0.0 tag
-# once, on main.
+# One pass over the allowlist (bounded cursor pagination, never an unbounded
+# crawl), then render, then the gate. A failure at any step stops before the
+# commit, so the last tagged snapshot keeps serving.
+#
+# Commit criterion: the item list, not the file bytes. `asOf` is regenerated on
+# every run, so now.json always differs byte-wise; `scripts/changed.mjs` decides
+# whether a row was added, removed or changed. The workflow cuts the immutable
+# v1.0.0 tag once, on main.
 
 on:
   schedule:
@@ -46,7 +50,7 @@ jobs:
       - name: Validate output
         run: npm run check
 
-      - name: Commit and cut v1.0.0
+      - name: Commit if the items changed and cut v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -55,14 +59,19 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-          # Commit only when the bytes changed. `now.json` and `now.md` are the
-          # only files this job is allowed to touch.
-          git add -- now.json now.md
-          if git diff --cached --quiet; then
-            echo 'now.json/now.md unchanged; nothing to commit'
-          else
+          # `asOf` changes on every run, so a byte diff would commit forever.
+          # The criterion is the item list: 0 = changed, 1 = identical.
+          if node scripts/changed.mjs; then
+            git add -- now.json now.md
             git commit -m 'chore: update now snapshot'
             git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            status=$?
+            if [ "$status" -ne 1 ]; then
+              echo 'changed.mjs failed'
+              exit "$status"
+            fi
+            echo 'item list unchanged; nothing to commit (asOf alone is not a change)'
           fi
 
           # v1.0.0 is immutable: cut it once, from main, carrying the first

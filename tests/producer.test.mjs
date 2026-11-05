@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -9,6 +10,7 @@ import { parseSources, validateSources } from '../scripts/lib/sources.mjs';
 import { renderMarkdown } from '../scripts/lib/render.mjs';
 import { runFetch } from '../scripts/fetch.mjs';
 import {
+  CHANGED,
   CHECK,
   FETCH,
   FIXTURES,
@@ -16,6 +18,8 @@ import {
   RELEASES,
   RENDER,
   githubHandler,
+  makeReleaseNodes,
+  releasesPage,
   runNode,
   stubServer,
   tmpRepo,
@@ -23,6 +27,27 @@ import {
 } from './helpers.mjs';
 
 const ENV = (server) => ({ GITHUB_API_URL: server.url, GITHUB_TOKEN: 'test-token-not-real' });
+
+const SOURCES_WITHOUT_OWNER = `sources:
+  - id: releases
+    kind: github-releases
+  - id: upstream
+    kind: github-prs
+    query: "is:pr is:merged author:ChristianLuciani"
+    first: 5
+`;
+
+function recordingGithub(options) {
+  const requests = [];
+  const handler = githubHandler(options);
+  return {
+    requests,
+    handler: (payload) => {
+      requests.push(payload);
+      return handler(payload);
+    },
+  };
+}
 
 test('fetch: same sources + same asOf produce byte-identical now.json', async (t) => {
   const root = await tmpRepo(t);
@@ -48,7 +73,8 @@ test('fetch: same sources + same asOf produce byte-identical now.json', async (t
 });
 
 test('fetch: builds a sorted snapshot cut at 5 from a stub GraphQL API', async (t) => {
-  const server = await stubServer(githubHandler());
+  const { requests, handler } = recordingGithub();
+  const server = await stubServer(handler);
   t.after(() => server.close());
   const root = await tmpRepo(t);
 
@@ -73,12 +99,125 @@ test('fetch: builds a sorted snapshot cut at 5 from a stub GraphQL API', async (
     ],
     'delta (2026-10-28) is the one dropped by the cut',
   );
+
+  // F1: the installation token's `viewer` is github-actions[bot]; the query
+  // must name the owner. The stub models that `viewer` owns no repos, so a
+  // regression here would also empty the snapshot.
+  const releasesRequest = requests.find((payload) =>
+    String(payload.query).includes('repositories('),
+  );
+  assert.ok(releasesRequest, 'a releases request was made');
+  assert.ok(!String(releasesRequest.query).includes('viewer'), 'must not query viewer');
+  assert.match(String(releasesRequest.query), /user\(login: \$owner\)/);
+  assert.equal(releasesRequest.variables.owner, 'ChristianLuciani');
+});
+
+test('fetch: resolves the owner from GITHUB_REPOSITORY_OWNER when sources.yaml omits it', async (t) => {
+  const { requests, handler } = recordingGithub();
+  const server = await stubServer(handler);
+  t.after(() => server.close());
+  const root = await tmpRepo(t, SOURCES_WITHOUT_OWNER);
+
+  const result = await runNode(FETCH, {
+    cwd: root,
+    env: { ...ENV(server), GITHUB_REPOSITORY_OWNER: 'ChristianLuciani' },
+  });
+  assert.equal(result.code, 0, result.stderr);
+
+  const releasesRequest = requests.find((payload) =>
+    String(payload.query).includes('repositories('),
+  );
+  assert.equal(releasesRequest.variables.owner, 'ChristianLuciani');
+});
+
+test('fetch: fails when neither sources.yaml nor the env names an owner', async (t) => {
+  const server = await stubServer(githubHandler());
+  t.after(() => server.close());
+  const root = await tmpRepo(t, SOURCES_WITHOUT_OWNER);
+
+  const result = await runNode(FETCH, {
+    cwd: root,
+    env: { ...ENV(server), GITHUB_REPOSITORY_OWNER: '' },
+  });
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /owner is not set/);
+  assert.match(result.stderr, /"releases"/);
+});
+
+test('fetch: follows endCursor for a second page', async (t) => {
+  const page1 = releasesPage(makeReleaseNodes(100, { prefix: 'page1', date: '2026-11-01' }), {
+    hasNextPage: true,
+    endCursor: 'cursor-1',
+  });
+  const page2 = releasesPage(makeReleaseNodes(10, { prefix: 'page2', date: '2026-11-02' }), {
+    hasNextPage: false,
+    endCursor: null,
+  });
+  const { requests, handler } = recordingGithub({ releasesPages: [page1, page2] });
+  const server = await stubServer(handler);
+  t.after(() => server.close());
+  const root = await tmpRepo(t);
+
+  const result = await runNode(FETCH, { cwd: root, env: ENV(server) });
+  assert.equal(result.code, 0, result.stderr);
+
+  const releasesRequests = requests.filter((payload) =>
+    String(payload.query).includes('repositories('),
+  );
+  assert.equal(releasesRequests.length, 2, 'two pages');
+  assert.equal(releasesRequests[0].variables.after, null);
+  assert.equal(releasesRequests[1].variables.after, 'cursor-1');
+
+  const snapshot = JSON.parse(await fs.readFile(path.join(root, 'now.json'), 'utf8'));
+  assert.equal(snapshot.items.length, 5);
+});
+
+test('fetch: stops at the bounded page cap (5 pages)', async (t) => {
+  const pages = Array.from({ length: 5 }, (_, index) =>
+    releasesPage(makeReleaseNodes(100, { prefix: `p${index}`, date: '2026-11-01' }), {
+      hasNextPage: true,
+      endCursor: `cursor-${index}`,
+    }),
+  );
+  const { requests, handler } = recordingGithub({ releasesPages: pages });
+  const server = await stubServer(handler);
+  t.after(() => server.close());
+  const root = await tmpRepo(t);
+
+  const result = await runNode(FETCH, { cwd: root, env: ENV(server) });
+  assert.equal(result.code, 0, result.stderr);
+
+  const releasesRequests = requests.filter((payload) =>
+    String(payload.query).includes('repositories('),
+  );
+  assert.equal(releasesRequests.length, 5, 'never requests a sixth page');
+});
+
+test('fetch: fails when the named user is not returned instead of writing an empty snapshot', async (t) => {
+  const server = await stubServer(() => ({
+    status: 200,
+    body: { data: { user: null } },
+  }));
+  t.after(() => server.close());
+  const root = await tmpRepo(t);
+
+  const result = await runNode(FETCH, { cwd: root, env: ENV(server) });
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /was not returned/);
+  await assert.rejects(fs.readFile(path.join(root, 'now.json')), /ENOENT/);
 });
 
 test('fetch: empty sources are valid and render one _Nothing in flight._ line', async (t) => {
   const server = await stubServer(
     githubHandler({
-      releases: { viewer: { repositories: { nodes: [] } } },
+      releases: {
+        user: {
+          repositories: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [],
+          },
+        },
+      },
       prs: { search: { nodes: [] } },
     }),
   );
@@ -133,8 +272,9 @@ test('fetch: a schema-invalid item writes nothing and exits non-zero', async (t)
   const server = await stubServer(
     githubHandler({
       releases: {
-        viewer: {
+        user: {
           repositories: {
+            pageInfo: { hasNextPage: false, endCursor: null },
             nodes: [
               {
                 nameWithOwner: 'ChristianLuciani/long',
@@ -202,6 +342,17 @@ test('render: is deterministic for the same input and asOf', async (t) => {
   assert.equal(second, first);
 });
 
+test('render: wraps a URL that would break a markdown link', () => {
+  const render = (url) =>
+    renderMarkdown({
+      items: [{ kind: 'note', title: 'odd', url, date: '2026-01-01', source: 'x' }],
+    });
+
+  assert.match(render('https://example.com/a)b'), /\[odd\]\(<https:\/\/example\.com\/a\)b>\)/);
+  assert.match(render('https://example.com/a b'), /\[odd\]\(<https:\/\/example\.com\/a b>\)/);
+  assert.match(render('https://example.com/a'), /\[odd\]\(https:\/\/example\.com\/a\)/);
+});
+
 test('check: passes a valid fixture', async (t) => {
   const root = await tmpRepo(t);
   await writeFixture(root, 'valid.json');
@@ -242,11 +393,60 @@ test('check: fails when now.md is not the render of now.json', async (t) => {
   assert.match(result.stderr, /not the byte-identical render/);
 });
 
+function git(root, args) {
+  execFileSync(
+    'git',
+    ['-c', 'user.email=test@example.com', '-c', 'user.name=test', ...args],
+    { cwd: root, stdio: 'ignore' },
+  );
+}
+
+async function committedFixture(t) {
+  const root = await tmpRepo(t);
+  await writeFixture(root, 'valid.json');
+  git(root, ['init', '-q']);
+  git(root, ['add', 'now.json']);
+  git(root, ['commit', '-qm', 'seed']);
+  return root;
+}
+
+test('changed: exits 1 when only asOf differs from HEAD', async (t) => {
+  const root = await committedFixture(t);
+  const snapshot = JSON.parse(await fs.readFile(path.join(root, 'now.json'), 'utf8'));
+  snapshot.asOf = '2026-11-06T09:00:00Z';
+  await fs.writeFile(path.join(root, 'now.json'), `${JSON.stringify(snapshot, null, 2)}\n`);
+
+  const result = await runNode(CHANGED, { cwd: root });
+  assert.equal(result.code, 1, result.stderr);
+  assert.match(result.stdout, /items identical to HEAD/);
+});
+
+test('changed: exits 0 when the item list differs from HEAD', async (t) => {
+  const root = await committedFixture(t);
+  const snapshot = JSON.parse(await fs.readFile(path.join(root, 'now.json'), 'utf8'));
+  snapshot.items[0].title = 'changed title';
+  await fs.writeFile(path.join(root, 'now.json'), `${JSON.stringify(snapshot, null, 2)}\n`);
+
+  const result = await runNode(CHANGED, { cwd: root });
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /items differ from HEAD/);
+});
+
+test('changed: exits 0 when HEAD has no now.json yet', async (t) => {
+  const root = await tmpRepo(t);
+  await writeFixture(root, 'valid.json');
+
+  const result = await runNode(CHANGED, { cwd: root });
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /no now\.json in HEAD/);
+});
+
 test('sources parser: accepts the allowlist shape and rejects unknown fields', () => {
   const text = `# comment
 sources:
   - id: releases
     kind: github-releases
+    owner: ChristianLuciani
   - id: upstream
     kind: github-prs
     query: "is:pr is:merged author:ChristianLuciani"
@@ -254,6 +454,7 @@ sources:
 `;
   const doc = validateSources(parseSources(text));
   assert.equal(doc.sources.length, 2);
+  assert.equal(doc.sources[0].owner, 'ChristianLuciani');
   assert.equal(doc.sources[1].first, '5');
 
   assert.throws(

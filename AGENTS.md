@@ -9,8 +9,9 @@ README and the site. The producer lives in `scripts/`; the workflow in
 ## Rules
 
 1. **One writer.** Only the workflow writes `now.json` / `now.md`. Never by hand.
-2. **Snapshot, not crawler.** One pass over the declared sources per run; no retry loop,
-   no unbounded pagination.
+   It commits only when the `items` list changes; a new `asOf` alone is not a change.
+2. **Snapshot, not crawler.** One pass over the declared sources per run; cursor
+   pagination is bounded (at most 5 pages); no retry loop.
 3. **Absolute dates.** `YYYY-MM-DD` from the source; `asOf` in UTC. Never a relative time.
 4. **Public data only.** Nothing from a private repo, a token, or a private surface.
 5. **No vanity metrics.** No stars, followers, visits.
@@ -18,7 +19,9 @@ README and the site. The producer lives in `scripts/`; the workflow in
    pin a tag, so a shape change is a new minor, never an edit in place.
 7. **Determinism.** Same sources + same `asOf` → same bytes. Every sort is total
    (`date` desc, then `url` asc).
-8. **Branch + PR.** The human merges; never push to `main`.
+8. **Branch + PR.** The agent never pushes to `main`: changes land by branch + PR and
+   the human merges. The update workflow is the one writer that commits and pushes the
+   snapshot to `main`.
 
 ## Commands
 

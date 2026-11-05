@@ -14,7 +14,7 @@
 const SOURCE_KINDS = new Set(['github-releases', 'github-prs']);
 const COMMON_FIELDS = new Set(['id', 'kind']);
 const KIND_FIELDS = {
-  'github-releases': new Set(),
+  'github-releases': new Set(['owner']),
   'github-prs': new Set(['query', 'first']),
 };
 
@@ -186,6 +186,12 @@ export function validateSources(doc) {
       throw new SourcesError(`${where}: duplicate source id "${source.id}"`);
     }
     seen.add(source.id);
+
+    if (source.kind === 'github-releases') {
+      if (source.owner !== undefined && !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(source.owner)) {
+        throw new SourcesError(`${where}: "owner" must be a GitHub login`);
+      }
+    }
 
     if (source.kind === 'github-prs') {
       if (typeof source.query !== 'string' || source.query.trim() === '') {

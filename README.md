@@ -27,8 +27,11 @@ them apart is what preserves the engine's determinism (SPEC §15.1/§19.5 in
 1. **One producer.** Only the workflow in this repo writes `now.json` / `now.md`.
    Never hand-edit either.
 2. **Snapshot, not crawler.** The workflow fetches declared sources, writes what it
-   got, and stops. No runtime API here, no per-visitor fetch.
+   got, and stops. Cursor pagination is bounded (at most 5 pages). No runtime API
+   here, no per-visitor fetch.
 3. **Committed output.** `now.json` + `now.md` are committed, dated, and tagged.
+   The workflow commits only when the `items` list changes; a new `asOf` alone is
+   not a change worth a commit.
 4. **Absolute time only.** Source dates are `YYYY-MM-DD`; `asOf` is the fetch instant
    in UTC. Never "2 hours ago" — it rots in cache and it lies.
 5. **Public sources only, declared.** `sources.yaml` is the allowlist. No tokens in
@@ -54,6 +57,7 @@ copies would drift.
 npm run fetch     # sources.yaml → now.json (needs GITHUB_TOKEN; only the workflow has it)
 npm run render    # now.json → now.md (idempotent)
 npm run check     # schema + order + https-only + no relative dates + no token-shaped strings
+npm run changed   # exit 0 if items differ from HEAD, 1 if identical (workflow commit criterion)
 npm test          # fixtures against a local GraphQL stub; no network
 ```
 

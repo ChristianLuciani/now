@@ -11,12 +11,17 @@ export const FIXTURES = path.join(HERE, 'fixtures');
 export const FETCH = path.join(REPO_ROOT, 'scripts', 'fetch.mjs');
 export const RENDER = path.join(REPO_ROOT, 'scripts', 'render.mjs');
 export const CHECK = path.join(REPO_ROOT, 'scripts', 'check.mjs');
+export const CHANGED = path.join(REPO_ROOT, 'scripts', 'changed.mjs');
 
-export async function tmpRepo(t) {
+export async function tmpRepo(t, sourcesText = null) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'now-test-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   await fs.cp(path.join(REPO_ROOT, 'schema'), path.join(dir, 'schema'), { recursive: true });
-  await fs.copyFile(path.join(FIXTURES, 'sources.yaml'), path.join(dir, 'sources.yaml'));
+  if (sourcesText === null) {
+    await fs.copyFile(path.join(FIXTURES, 'sources.yaml'), path.join(dir, 'sources.yaml'));
+  } else {
+    await fs.writeFile(path.join(dir, 'sources.yaml'), sourcesText);
+  }
   return dir;
 }
 
@@ -81,9 +86,42 @@ export function stubServer(handler) {
   });
 }
 
+// A real GraphQL `user(login: ...).repositories` connection, with pageInfo.
+export function releasesPage(nodes, { hasNextPage = false, endCursor = null } = {}) {
+  return {
+    data: {
+      user: {
+        repositories: {
+          pageInfo: { hasNextPage, endCursor },
+          nodes,
+        },
+      },
+    },
+  };
+}
+
+export function makeReleaseNodes(count, { prefix = 'repo', date = '2026-11-01' } = {}) {
+  return Array.from({ length: count }, (_, index) => {
+    const name = `${prefix}-${String(index).padStart(3, '0')}`;
+    return {
+      nameWithOwner: `ChristianLuciani/${name}`,
+      releases: {
+        nodes: [
+          {
+            tagName: 'v1.0.0',
+            url: `https://github.com/ChristianLuciani/${name}/releases/tag/v1.0.0`,
+            publishedAt: `${date}T00:00:00Z`,
+          },
+        ],
+      },
+    };
+  });
+}
+
 export const RELEASES = {
-  viewer: {
+  user: {
     repositories: {
+      pageInfo: { hasNextPage: false, endCursor: null },
       nodes: [
         {
           nameWithOwner: 'ChristianLuciani/alpha',
@@ -157,11 +195,41 @@ export const PRS = {
   },
 };
 
-export function githubHandler({ fail = null, releases = RELEASES, prs = PRS } = {}) {
+// Models the real installation-token semantics: `viewer` is github-actions[bot]
+// and owns no repos, so a query that falls back to `viewer` yields nothing.
+const VIEWER_IS_THE_BOT = {
+  data: {
+    viewer: {
+      repositories: {
+        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [],
+      },
+    },
+  },
+};
+
+export function githubHandler({
+  fail = null,
+  releases = RELEASES,
+  releasesPages = null,
+  prs = PRS,
+} = {}) {
+  let page = 0;
   return (payload) => {
     const query = String(payload.query ?? '');
+    if (query.includes('viewer')) {
+      return { status: 200, body: VIEWER_IS_THE_BOT };
+    }
     if (query.includes('repositories(')) {
       if (fail === 'releases') return { status: 500, body: { message: 'boom' } };
+      if (releasesPages) {
+        const body = releasesPages[page];
+        page += 1;
+        return {
+          status: 200,
+          body: body ?? releasesPage([]),
+        };
+      }
       return { status: 200, body: { data: releases } };
     }
     if (query.includes('search(')) {
