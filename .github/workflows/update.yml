@@ -6,10 +6,10 @@ name: update
 # crawl), then render, then the gate. A failure at any step stops before the
 # commit, so the last tagged snapshot keeps serving.
 #
-# Commit criterion: the item list, not the file bytes. `asOf` is regenerated on
-# every run, so now.json always differs byte-wise; `scripts/changed.mjs` decides
-# whether a row was added, removed or changed. The workflow cuts the immutable
-# v1.0.0 tag once, on main.
+# Commit criterion: the item list or the rendered now.md, not the file bytes.
+# `asOf` is regenerated on every run, so now.json always differs byte-wise;
+# `scripts/changed.mjs` decides whether a row changed or the renderer now emits
+# different markdown. The workflow cuts the immutable v1.0.0 tag once, on main.
 
 on:
   schedule:
@@ -29,13 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Tags are needed to decide whether v1.0.0 already exists.
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
 

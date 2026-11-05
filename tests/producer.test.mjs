@@ -369,6 +369,9 @@ for (const [fixture, expected] of [
   ['invalid-non-https.json', /not https:\/\//],
   ['invalid-too-many.json', /at most 5/],
   ['invalid-token.json', /token-shaped GitHub token/],
+  ['invalid-token-npm.json', /token-shaped npm token/],
+  ['invalid-token-gitlab.json', /token-shaped GitLab token/],
+  ['invalid-token-openai.json', /token-shaped OpenAI key/],
 ]) {
   test(`check: fails on ${fixture}`, async (t) => {
     const root = await tmpRepo(t);
@@ -393,6 +396,17 @@ test('check: fails when now.md is not the render of now.json', async (t) => {
   assert.match(result.stderr, /not the byte-identical render/);
 });
 
+test('check: detects a token that appears only in now.md', async (t) => {
+  const root = await tmpRepo(t);
+  await writeFixture(root, 'valid.json');
+  const markdown = await fs.readFile(path.join(root, 'now.md'), 'utf8');
+  await fs.writeFile(path.join(root, 'now.md'), `${markdown}\nghp_${'B'.repeat(36)}\n`);
+
+  const result = await runNode(CHECK, { cwd: root });
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /token-shaped GitHub token in now\.md/);
+});
+
 function git(root, args) {
   execFileSync(
     'git',
@@ -405,7 +419,7 @@ async function committedFixture(t) {
   const root = await tmpRepo(t);
   await writeFixture(root, 'valid.json');
   git(root, ['init', '-q']);
-  git(root, ['add', 'now.json']);
+  git(root, ['add', 'now.json', 'now.md']);
   git(root, ['commit', '-qm', 'seed']);
   return root;
 }
@@ -418,7 +432,7 @@ test('changed: exits 1 when only asOf differs from HEAD', async (t) => {
 
   const result = await runNode(CHANGED, { cwd: root });
   assert.equal(result.code, 1, result.stderr);
-  assert.match(result.stdout, /items identical to HEAD/);
+  assert.match(result.stdout, /items and now\.md identical to HEAD/);
 });
 
 test('changed: exits 0 when the item list differs from HEAD', async (t) => {
@@ -430,6 +444,23 @@ test('changed: exits 0 when the item list differs from HEAD', async (t) => {
   const result = await runNode(CHANGED, { cwd: root });
   assert.equal(result.code, 0, result.stderr);
   assert.match(result.stdout, /items differ from HEAD/);
+});
+
+test('changed: exits 0 when items are identical but now.md renders differently', async (t) => {
+  const root = await committedFixture(t);
+
+  // Simulate a renderer change: HEAD carries the old markdown, the working
+  // now.json keeps the same items.
+  await fs.writeFile(
+    path.join(root, 'now.md'),
+    '<!-- now starts -->\n- old renderer output\n<!-- now ends -->\n',
+  );
+  git(root, ['add', 'now.md']);
+  git(root, ['commit', '-qm', 'old renderer']);
+
+  const result = await runNode(CHANGED, { cwd: root });
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /now\.md render differs from HEAD/);
 });
 
 test('changed: exits 0 when HEAD has no now.json yet', async (t) => {

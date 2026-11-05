@@ -15,6 +15,9 @@ import { isMain, readSchema } from './lib/cli.mjs';
 const TOKEN_PATTERNS = [
   { name: 'GitHub token', pattern: /gh[pousr]_[A-Za-z0-9]{20,}/g },
   { name: 'fine-grained GitHub token', pattern: /github_pat_[A-Za-z0-9_]{20,}/g },
+  { name: 'npm token', pattern: /npm_[A-Za-z0-9]{36}/g },
+  { name: 'GitLab token', pattern: /glpat-[A-Za-z0-9_-]{20,}/g },
+  { name: 'OpenAI key', pattern: /sk-[A-Za-z0-9]{20,}/g },
   { name: 'private key block', pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
   { name: 'AWS access key', pattern: /(?:AKIA|ASIA)[0-9A-Z]{16}/g },
   { name: 'Slack token', pattern: /xox[baprs]-[A-Za-z0-9-]{10,}/g },

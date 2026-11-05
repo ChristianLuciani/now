@@ -9,7 +9,8 @@ README and the site. The producer lives in `scripts/`; the workflow in
 ## Rules
 
 1. **One writer.** Only the workflow writes `now.json` / `now.md`. Never by hand.
-   It commits only when the `items` list changes; a new `asOf` alone is not a change.
+   It commits only when the `items` list or the rendered `now.md` changes; a new
+   `asOf` alone is not a change.
 2. **Snapshot, not crawler.** One pass over the declared sources per run; cursor
    pagination is bounded (at most 5 pages); no retry loop.
 3. **Absolute dates.** `YYYY-MM-DD` from the source; `asOf` in UTC. Never a relative time.
