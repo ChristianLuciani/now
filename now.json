@@ -1,12 +1,12 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-06T00:14:47Z",
+  "asOf": "2026-11-06T06:50:09Z",
   "items": [
     {
       "kind": "pr",
-      "title": "feat(geo): deriva el JSON-LD de entidad y la política IA del SSOT (#140)",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/141",
-      "date": "2026-11-05",
+      "title": "feat(intro): skip explícito de la animación inicial y CV solo al imprimir",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/143",
+      "date": "2026-11-06",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
