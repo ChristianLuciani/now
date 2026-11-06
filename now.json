@@ -1,20 +1,20 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-06T06:50:09Z",
+  "asOf": "2026-11-06T20:53:57Z",
   "items": [
     {
       "kind": "pr",
-      "title": "feat(intro): skip explícito de la animación inicial y CV solo al imprimir",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/143",
+      "title": "sprint(christianluciani.github.io): #132",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/148",
       "date": "2026-11-06",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
       "kind": "pr",
-      "title": "fix(golden): el mensaje de la guarda nombra los datos reales",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/144",
-      "date": "2026-11-05",
-      "source": "github:ChristianLuciani/christianluciani.github.io"
+      "title": "sprint(profile-as-code): #482",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/488",
+      "date": "2026-11-06",
+      "source": "github:ChristianLuciani/profile-as-code"
     },
     {
       "kind": "release",
