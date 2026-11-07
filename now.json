@@ -1,20 +1,20 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-07T00:55:32Z",
+  "asOf": "2026-11-07T18:46:49Z",
   "items": [
     {
       "kind": "pr",
-      "title": "sprint(christianluciani.github.io): #129",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/150",
+      "title": "docs(cli): name every factPresent key in the user guide",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/499",
       "date": "2026-11-07",
-      "source": "github:ChristianLuciani/christianluciani.github.io"
+      "source": "github:ChristianLuciani/profile-as-code"
     },
     {
       "kind": "pr",
-      "title": "sprint(christianluciani.github.io): #130",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/151",
+      "title": "docs(spec): ratify D25 — the record is the asset; profiles are views (#495)",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/500",
       "date": "2026-11-07",
-      "source": "github:ChristianLuciani/christianluciani.github.io"
+      "source": "github:ChristianLuciani/profile-as-code"
     },
     {
       "kind": "release",
