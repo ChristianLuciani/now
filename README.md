@@ -31,7 +31,10 @@ them apart is what preserves the engine's determinism (SPEC §15.1/§19.5 in
    here, no per-visitor fetch.
 3. **Committed output.** `now.json` + `now.md` are committed, dated, and tagged.
    The workflow commits only when the `items` list or the rendered `now.md`
-   changes; a new `asOf` alone is not a change worth a commit.
+   changes; a new `asOf` alone is not a change worth a commit. Every snapshot
+   commit then gets the next `v1.0.<n>` tag from the same run, and an existing
+   tag is never moved: that tag is the only thing a consumer can pin, so an
+   untagged snapshot is a snapshot nobody reads.
 4. **Absolute time only.** Source dates are `YYYY-MM-DD`; `asOf` is the fetch instant
    in UTC. Never "2 hours ago" — it rots in cache and it lies.
 5. **Public sources only, declared.** `sources.yaml` is the allowlist. No tokens in
@@ -58,6 +61,7 @@ npm run fetch     # sources.yaml → now.json (needs GITHUB_TOKEN; only the work
 npm run render    # now.json → now.md (idempotent)
 npm run check     # schema + order + https-only + no relative dates + no token-shaped strings
 npm run changed   # exit 0 if items or the rendered now.md differ from HEAD, 1 if not
+npm run tag       # print the next immutable vX.Y.Z tag (read-only; the workflow creates it)
 npm test          # fixtures against a local GraphQL stub; no network
 ```
 

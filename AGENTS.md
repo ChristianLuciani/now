@@ -10,7 +10,9 @@ README and the site. The producer lives in `scripts/`; the workflow in
 
 1. **One writer.** Only the workflow writes `now.json` / `now.md`. Never by hand.
    It commits only when the `items` list or the rendered `now.md` changes; a new
-   `asOf` alone is not a change.
+   `asOf` alone is not a change. The same run tags every snapshot commit with the
+   next `v1.0.<n>` (a consumer can only pin a tag, so an untagged snapshot is one
+   nobody reads) and never moves an existing tag.
 2. **Snapshot, not crawler.** One pass over the declared sources per run; cursor
    pagination is bounded (at most 5 pages); no retry loop.
 3. **Absolute dates.** `YYYY-MM-DD` from the source; `asOf` in UTC. Never a relative time.
@@ -30,5 +32,6 @@ README and the site. The producer lives in `scripts/`; the workflow in
 npm run fetch     # sources → now.json (needs GITHUB_TOKEN; the workflow has it)
 npm run render    # now.json → now.md (idempotent)
 npm run check     # schema + sorted + no secrets in the output
+npm run tag       # the next immutable vX.Y.Z for this snapshot (read-only)
 npm test          # fixtures and a local GraphQL stub; no network
 ```

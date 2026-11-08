@@ -9,6 +9,7 @@ import { isDate, isDateTime } from '../scripts/lib/schema.mjs';
 import { loadSources, parseSources, validateSources } from '../scripts/lib/sources.mjs';
 import { renderMarkdown } from '../scripts/lib/render.mjs';
 import { runFetch } from '../scripts/fetch.mjs';
+import { nextTag, readTags } from '../scripts/tag.mjs';
 import {
   CHANGED,
   CHECK,
@@ -583,4 +584,46 @@ test('sources.yaml: upstream is bounded and excludes the feed repo', async () =>
   assert.ok(upstream, 'upstream source is declared');
   assert.ok(upstream.first <= 2, `upstream must not fill the cut alone, got first: ${upstream.first}`);
   assert.match(upstream.query, /-repo:ChristianLuciani\/now\b/);
+});
+
+// The freeze this covers: the workflow cut `v1.0.0` once and stopped tagging,
+// so the producer kept committing while both consumers stayed pinned to the
+// last hand-cut tag (site served 2026-11-05 on 2026-11-08).
+test('tag: the next snapshot tag is the highest vX.Y.Z plus one patch', () => {
+  assert.equal(nextTag([]), 'v1.0.0');
+  assert.equal(nextTag(['v1.0.0']), 'v1.0.1');
+  assert.equal(nextTag(['v1.0.1', 'v1.0.0']), 'v1.0.2');
+  // Numeric order, not lexical: v1.0.9 < v1.0.10.
+  assert.equal(nextTag(['v1.0.9', 'v1.0.10']), 'v1.0.11');
+  // A hand-cut minor opens the next line instead of being renumbered.
+  assert.equal(nextTag(['v1.0.7', 'v1.1.0']), 'v1.1.1');
+  // A hand-cut major wins over every older line.
+  assert.equal(nextTag(['v1.1.4', 'v2.0.0']), 'v2.0.1');
+});
+
+test('tag: non-pin refs never drive the arithmetic', () => {
+  for (const junk of ['latest', 'v1', 'v1.0', 'v1.0.1-rc1', 'main', '1.0.2', '']) {
+    assert.equal(nextTag([junk]), 'v1.0.0', `ignored: ${JSON.stringify(junk)}`);
+  }
+  assert.equal(nextTag(undefined), 'v1.0.0');
+  // Ignores junk around a valid tag instead of bailing out.
+  assert.equal(nextTag(['stable', 'v1.0.3', 'v2']), 'v1.0.4');
+});
+
+test('tag: readTags goes through git and the CLI prints the tag', async (t) => {
+  const root = await tmpRepo(t);
+  git(root, ['init', '-q']);
+  await fs.writeFile(path.join(root, 'README.md'), '# probe\n');
+  git(root, ['add', 'README.md']);
+  git(root, ['commit', '-qm', 'seed']);
+  git(root, ['tag', 'v1.0.0']);
+  git(root, ['tag', 'v1.0.1']);
+
+  assert.deepEqual(readTags({ root }).sort(), ['v1.0.0', 'v1.0.1']);
+
+  const result = await runNode(path.join(REPO_ROOT, 'scripts', 'tag.mjs'), { cwd: root });
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'v1.0.2');
+  // Read-only: the CLI must not create the tag it prints.
+  assert.deepEqual(readTags({ root }).sort(), ['v1.0.0', 'v1.0.1']);
 });
