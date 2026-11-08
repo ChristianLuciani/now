@@ -1,18 +1,18 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-08T02:28:13Z",
+  "asOf": "2026-11-08T21:09:48Z",
   "items": [
     {
       "kind": "pr",
-      "title": "docs: publicar el badge de Substack en el README del perfil",
-      "url": "https://github.com/ChristianLuciani/ChristianLuciani/pull/5",
+      "title": "fix(themes): cierra los 2 nit del pase fresco de #165",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/166",
       "date": "2026-11-08",
-      "source": "github:ChristianLuciani/ChristianLuciani"
+      "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
       "kind": "pr",
-      "title": "sprint(christianluciani.github.io): #136",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/164",
+      "title": "docs(readme): refleja la estructura real y las tres versiones publicadas",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/168",
       "date": "2026-11-08",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
