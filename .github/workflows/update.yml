@@ -9,7 +9,9 @@ name: update
 # Commit criterion: the item list or the rendered now.md, not the file bytes.
 # `asOf` is regenerated on every run, so now.json always differs byte-wise;
 # `scripts/changed.mjs` decides whether a row changed or the renderer now emits
-# different markdown. The workflow cuts the immutable v1.0.0 tag once, on main.
+# different markdown. Every snapshot commit then gets its own immutable tag on
+# main, because a consumer can only pin a tag: an untagged commit is a snapshot
+# nobody reads.
 
 on:
   schedule:
@@ -74,15 +76,25 @@ jobs:
             echo 'item list unchanged; nothing to commit (asOf alone is not a change)'
           fi
 
-          # v1.0.0 is immutable: cut it once, from main, carrying the first
-          # committed snapshot. Later releases are explicit minor cuts.
+          # Every snapshot commit carries its own tag: consumers pin tag +
+          # digest, so an untagged snapshot is one nobody can consume. Cutting
+          # only v1.0.0 (the previous behaviour) froze both consumers on
+          # 2026-11-05 while this workflow kept committing (measured 2026-11-08).
+          # A tag is never moved: an existing one is left immutable.
           if [ "${GITHUB_REF}" != 'refs/heads/main' ]; then
             echo 'not on main; skipping tag'
             exit 0
           fi
-          if git rev-parse -q --verify 'refs/tags/v1.0.0' >/dev/null; then
-            echo 'v1.0.0 already exists; leaving it immutable'
+          if [ "$(git log -1 --format=%s)" != 'chore: update now snapshot' ]; then
+            echo 'HEAD is not a snapshot commit; skipping tag'
             exit 0
           fi
-          git tag -a v1.0.0 -m 'now v1.0.0: first tagged snapshot'
-          git push origin refs/tags/v1.0.0
+          if existing="$(git describe --exact-match --tags HEAD 2>/dev/null)"; then
+            echo "HEAD already carries $existing; leaving it immutable"
+            exit 0
+          fi
+          git fetch --quiet --tags origin
+          TAG="$(node scripts/tag.mjs)"
+          # HEAD, not GITHUB_SHA: this run may have just committed its own snapshot.
+          git tag -a "$TAG" -m "now $TAG: snapshot $(git rev-parse --short HEAD)"
+          git push origin "refs/tags/$TAG"
