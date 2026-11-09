@@ -1,18 +1,18 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-09T00:53:20Z",
+  "asOf": "2026-11-09T07:57:56Z",
   "items": [
     {
       "kind": "pr",
-      "title": "test(now): derivar el tag de re-pin del lock (fix #170)",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/172",
+      "title": "chore(now): refresh snapshot to v1.0.3 (Ahora deja de mostrar 2026-11-05)",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/173",
       "date": "2026-11-09",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
       "kind": "pr",
-      "title": "chore(now): refresh snapshot to v1.0.3 (Ahora deja de mostrar 2026-11-05)",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/173",
+      "title": "ci(now): publicar el refresh por PR (main exige build-test)",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/174",
       "date": "2026-11-09",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
