@@ -1,19 +1,19 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-10T02:06:22Z",
+  "asOf": "2026-11-11T06:13:20Z",
   "items": [
     {
       "kind": "pr",
-      "title": "ci(now): falla rápido si el CI del refresh espera aprobación humana",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/181",
-      "date": "2026-11-09",
+      "title": "Compás: grafo sync con SSOT/repos reales + links clicables",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/186",
+      "date": "2026-11-11",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
       "kind": "pr",
-      "title": "ci(now): refresh estilo Dependabot (abre el PR y se detiene)",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/183",
-      "date": "2026-11-09",
+      "title": "Compás: semántica de colores (dorado=pub, teal=desarrollo, gris=idea) + nodos futuro",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/187",
+      "date": "2026-11-11",
       "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
