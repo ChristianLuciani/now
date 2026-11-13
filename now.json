@@ -1,20 +1,20 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-11T21:55:55Z",
+  "asOf": "2026-11-13T00:20:47Z",
   "items": [
     {
       "kind": "pr",
-      "title": "Compás: semántica de colores (dorado=pub, teal=desarrollo, gris=idea) + nodos futuro",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/187",
-      "date": "2026-11-11",
-      "source": "github:ChristianLuciani/christianluciani.github.io"
+      "title": "docs(spec): §9.1 adds profile-ui to the profile-* family; record the SoR-GUI vs M5 scope boundary",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/524",
+      "date": "2026-11-12",
+      "source": "github:ChristianLuciani/profile-as-code"
     },
     {
       "kind": "pr",
-      "title": "Compás: grafo sync con SSOT/repos reales + links clicables",
-      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/189",
-      "date": "2026-11-11",
-      "source": "github:ChristianLuciani/christianluciani.github.io"
+      "title": "fix(test): judge cite-check's forbidden vocabulary on the report, not on the source label (#519)",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/527",
+      "date": "2026-11-12",
+      "source": "github:ChristianLuciani/profile-as-code"
     },
     {
       "kind": "release",
