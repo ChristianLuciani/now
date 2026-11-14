@@ -1,6 +1,6 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-14T17:05:33Z",
+  "asOf": "2026-11-14T21:28:58Z",
   "items": [
     {
       "kind": "pr",
@@ -11,9 +11,9 @@
     },
     {
       "kind": "pr",
-      "title": "docs(spec): round 5 — state what each surface counts, and that §21's count promise is open",
-      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/530",
-      "date": "2026-11-13",
+      "title": "docs: state the schema's user-facing guarantees (exact-path errors, http(s)-only URLs)",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/537",
+      "date": "2026-11-14",
       "source": "github:ChristianLuciani/profile-as-code"
     },
     {
