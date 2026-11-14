@@ -1,12 +1,12 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-13T07:55:39Z",
+  "asOf": "2026-11-14T17:05:33Z",
   "items": [
     {
       "kind": "pr",
-      "title": "feat(egress): ONE memory, ONE scope — bind the baseline to the log with an integrity chain (#520)",
-      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/528",
-      "date": "2026-11-13",
+      "title": "docs: clarify that pnpm/yarn are valid options for installing CLI",
+      "url": "https://github.com/ChristianLuciani/profile-as-code/pull/536",
+      "date": "2026-11-14",
       "source": "github:ChristianLuciani/profile-as-code"
     },
     {
