@@ -1,20 +1,20 @@
 {
   "schema": "now/v1",
-  "asOf": "2026-11-19T03:24:47Z",
+  "asOf": "2026-11-19T13:01:45Z",
   "items": [
     {
       "kind": "pr",
-      "title": "Rename repository from cluciani-brand-kit to brand-kit-christianluciani",
-      "url": "https://github.com/ChristianLuciani/brand-kit-christianluciani/pull/23",
+      "title": "Rename repo → brand-kit-christianluciani: self-references + SSOT",
+      "url": "https://github.com/ChristianLuciani/brand-kit-christianluciani/pull/25",
       "date": "2026-11-19",
       "source": "github:ChristianLuciani/brand-kit-christianluciani"
     },
     {
       "kind": "pr",
-      "title": "chore(release): corte v1.4.0 — plantillas PPT de marca",
-      "url": "https://github.com/ChristianLuciani/brand-kit-christianluciani/pull/24",
+      "title": "chore(brand): refs a brand-kit-christianluciani + pin a v1.4.0 (#190)",
+      "url": "https://github.com/ChristianLuciani/christianluciani.github.io/pull/191",
       "date": "2026-11-19",
-      "source": "github:ChristianLuciani/brand-kit-christianluciani"
+      "source": "github:ChristianLuciani/christianluciani.github.io"
     },
     {
       "kind": "release",
